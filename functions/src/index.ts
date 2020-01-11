@@ -5,14 +5,52 @@ admin.initializeApp()
 // // Start writing Firebase Functions
 // // https://firebase.google.com/docs/functions/typescript
 //
-export const alertOnUpdate = functions.database
-.ref('/alerts/{uid}/')
+export const alertLocationOnUpdate = functions.database
+.ref('/alerts/{uid}/location')
 .onUpdate((change,context)=>{
 	const uid= context.params.uid
 	const location = change.after.val()
-	console.log(`"${uid} was updated with location ${location}"`)
-	return null
+	console.log(`"${uid} was updated with location ${location}. Previous location ${change.before.val()}"`)
+	//send data message with updated location
+	const payload= {
+					data:{
+						uid:uid,
+						liveLocation:location,
+					}
+				}
+				console.log(payload)
+				//return a Promise so that cloud functions wait till Promise is handled before cleaning-up
+				const topic="saviours_"+uid			
+				console.log("Topic received:"+topic+" type:"+typeof(topic))
+				
+				return admin.messaging().sendToTopic(topic, payload)
+				.then((resp)=>{console.log("Data message dispatched:"+resp)})	
+
 })
+
+export const alertSavioursOnUpdate = functions.database
+.ref('/alerts/{uid}/saviours/')
+.onUpdate((change,context)=>{
+	const uid= context.params.uid
+	const saviourCount= Object.keys(change.after.val()).length
+	console.log(`"Alert ${uid} was updated with Saviour count: ${saviourCount}."`)
+	//send data message with updated location
+	const payload= {
+					data:{
+						uid:uid,
+						saviourCount:String(saviourCount),
+					}
+				}
+				console.log(payload)
+				//return a Promise so that cloud functions wait till Promise is handled before cleaning-up
+				const topic="victim_"+uid			
+				console.log("Topic received:"+topic+" type:"+typeof(topic))
+				
+				return admin.messaging().sendToTopic(topic, payload)
+				.then((resp)=>{console.log("Count Update Data message dispatched:"+resp)})	
+
+})
+
 export const alertOnCreate = functions.database
 .ref('/alerts/{uid}/')
 .onCreate((snapshot,context)=>{
@@ -52,9 +90,12 @@ export const alertOnCreate = functions.database
 				}
 				console.log(payload)
 				//return a Promise so that cloud functions wait till Promise is handled before cleaning-up
-				const topic=getTopicString(zone,subzone)
-				console.log("Topic received:"+topic)
-				return admin.messaging().sendToTopic("alerts_72_19_24_34", payload)	
+				var topic=getTopicString(zone,subzone)			
+				console.log("Topic received:"+topic+" type:"+typeof(topic))
+				console.log(getTopicString(zone,subzone))
+				console.log('topic!=="alerts_72_19_52_17:"'+ topic!=="alerts_72_19_52_17")
+
+				return admin.messaging().sendToTopic(topic, payload)	
 
 			})
 			.catch( err=>{console.log("error:"+err)})
@@ -80,7 +121,7 @@ function getzone(location:String){
 
 
 function getTopicString(zone:string,subzone:string):string{
-	const tpstr=`"/topics/alerts_${zone}_${subzone}"`
+	const tpstr=`alerts_${zone}_${subzone}`
 	console.log("topic string is:"+tpstr)
-	return tpstr
+	return String(tpstr)
 }
