@@ -40,7 +40,7 @@ export const testCount= functions.https.onRequest(async (req,res)=>{
 	console.log("Topic for payload:"+topic)
 	console.log(payload)
 
-	await admin.messaging().sendToDevice(topic,payload)
+	await admin.messaging().sendToTopic(topic,payload)
 	.catch(err=>{console.log("error:"+err)
 				return res.status(500).send(err)
 		})
