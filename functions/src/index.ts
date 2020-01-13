@@ -12,20 +12,43 @@ export const testCount= functions.https.onRequest(async (req,res)=>{
 	const callerUid=req.query.callerUid
 	const targetUid=req.query.targetUid
 	console.log(`${callerUid} called the https trigger. Sending message to victim_${targetUid}`)
-
-	const payload={
+	let payload,topic
+	if(targetUid!==callerUid){
+		console.log("caler is not target")
+	payload={
+		//send acknowledgement message to target
 		data:{
 			uid:targetUid,
 			testCount:String(1),
 		}
 	}
-	const topic="victim_"+targetUid
+	topic="victim_"+targetUid
+	}
+	else{
+		console.log("caler is  target")
+		//if target is caller then post the message to alerts_#zoneDeg_#subzoneMin to sendCount
+		 payload={
+		//send acknowledgement message to target
+		data:{
+			uid:targetUid,
+			sendCount:String(1), //makes other devices send count
+		}
+	}
+	 topic=req.query.topic || "notfound"
+	}
+
+	console.log("Topic for payload:"+topic)
+	console.log(payload)
+
 	await admin.messaging().sendToDevice(topic,payload)
 	.catch(err=>{console.log("error:"+err)
 				return res.status(500).send(err)
 		})
-	return res.status(200).send("success")
+	
+	console.log(`Sent message to ${topic}`)
+	return res.status(200).send("sent message to "+topic)
 })
+
 export const alertLocationOnUpdate = functions.database
 .ref('/alerts/{uid}/location')
 .onUpdate((change,context)=>{
